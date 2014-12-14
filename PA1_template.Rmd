@@ -1,0 +1,54 @@
+---
+title: 'Reproducible Research: Peer Assessment 1'
+output: html_document
+---
+
+#Loading and preprocessing the data
+```{r, echo=TRUE, warning=FALSE}
+unzip(zipfile="activity.zip")
+data<-read.csv("activity.csv",header=TRUE)
+data$date <- strptime(data$date, "%Y-%m-%d")
+```
+
+#What is mean total number of steps taken per day?
+
+```{r, echo=TRUE, warning=FALSE}
+totalSteps <- tapply(data$steps, data$date$yday, sum, na.rm=T)
+plot(unique(data$date), totalSteps, main="Total number of steps each day", xlab="Date", ylab="Frequency", ylim = c(0, 20000),type="h", col="purple")
+mean(totalSteps, na.rm=TRUE)
+median(totalSteps, na.rm=TRUE)
+```
+#What is the average daily activity pattern?
+```{r, echo=TRUE}
+averageSteps <- aggregate(x=list(steps=data$steps), by=list(interval=data$interval), FUN=mean, na.rm=TRUE)
+plot(averageSteps$interval, averageSteps$steps, main="Average Steps by Interval",xlab="Interval",ylab="Mean number of steps", type="l")
+maxSteps <- max(averageSteps$steps)
+maxSteps 
+maxStepsInt <- subset(averageSteps,steps==max(steps))$interval
+maxStepsInt
+```
+#Imputing missing values
+```{r, echo=TRUE, warning=FALSE}
+sum(is.na(data$steps))
+
+data1 <- data
+for (i in 1:nrow(data1)) {
+  if(is.na(data1[i,1])){
+    data1[i,1] <- subset(averageSteps,interval==data1$interval[i])[2]
+  }
+}
+totalSteps <- tapply(data1$steps, data1$date$yday, sum, na.rm=T)
+
+plot(unique(data1$date), totalSteps, main="Total number of steps each day", xlab="Date", ylab="Frequency", ylim = c(0, 20000),type="h", col="purple")
+mean(totalSteps, na.rm=TRUE)
+median(totalSteps, na.rm=TRUE)
+```
+#Are there differences in activity patterns between weekdays and weekends?
+```{r, echo=TRUE, warning=FALSE}
+days <- weekdays(data1$date)
+data1$dayType <- ifelse(days == "Суббота" | days == "Воскресенье", "Weekend", "Weekday")
+meanSteps <- aggregate(data1$steps,by=list(data1$interval, data1$dayType), mean)
+names(meanSteps) <- c("interval","dayType","steps")
+library(lattice)
+xyplot(steps~interval | dayType, meanSteps,type="l", layout=c(1,2),xlab="Interval",ylab = "Number of steps")
+```
